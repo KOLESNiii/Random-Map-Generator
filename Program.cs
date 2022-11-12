@@ -108,26 +108,50 @@ namespace MapGenerator
 
     }
 
+    class Point
+    {
+        public Point(int xin, int yin, int valuein)
+        {
+            x = xin;
+            y = yin;
+            value = valuein;
+        }
+        public int x;
+        public int y;
+        public int value;
+    }
     [SupportedOSPlatform("windows")]
     class MapGenerator
     {
+        public static int limit;
+
+        public static List<double> proportions = new List<double>();
+        public static float persistence;
+        public static float scale;
+        public static int resolution;
+        public static int width;
+        public static int height;
+        public static int numThreads;
         public static void Main(string[] args)
+        
         {
             Random rand = new Random();
-            int width = 4000;
-            int height = 2000;
-            int res = 1;
+            width = 4000;
+            height = 2000;
+            resolution = 1;
             int randomInt = rand.Next(1, 7);
             int randomInt2 = rand.Next(45, 55);
-            float scale = 0.0007f; //bigger this number, the smaller the individual biome is
-            float persistence = 0.50f; //0.45-0.55
+            scale = 0.0007f; //bigger this number, the smaller the individual biome is
+            persistence = 0.50f; //0.45-0.55
+            limit = 1000;
+            proportions.Add(0.71); //water
+            proportions.Add(0.01); //beach
+            proportions.Add(0.21); //forest/grassland
+            proportions.Add(0.07);
             Console.WriteLine($"Seed: {Seed()}");
-            //Console.WriteLine(String.Join(",",SimplexNoise.Noise.perm));
-            //System.Environment.Exit(0);
-
-            double[,] valuesRaw = GenerateArray(width, height, persistence, scale);
+            double[,] valuesRaw = GenerateArray();
             RGB[,] RGBArray = GenerateRGBArray(valuesRaw);
-            Bitmap bmp = GenerateBMP(RGBArray, res);
+            Bitmap bmp = GenerateBMP(RGBArray);
 
             SaveImage(bmp, "noiseMap.png");
         }
@@ -156,29 +180,26 @@ namespace MapGenerator
             image.Save(path, ImageFormat.Png);
         }
 
-        public static double[,] GenerateArray(int width, int height, float persistence, float scale)
+        public static double[,] GenerateArray()
         {
             double[,] values = new double[width, height];
             Console.Write("Creating noise using SimplexNoise...");
-            using (var progress = new ProgressBar()){
-                for (int x = 0; x < width; x++)
-                    {
-                        for (int y = 0; y < height; y++)
-                        {
-                            values[x,y] = (int)SimplexNoise.Interpolation.sumOctave(8, x, y, persistence, scale, 0, 500);
-                            progress.Report((double) (x*height+y)/(width*height));
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
+            Parallel.For(0, width, x => Parallel.For(0, height, y =>
+            {
+                values[x,y] = (int)SimplexNoise.Interpolation.sumOctave(8, x, y, persistence, scale, 0, limit);
 
-                        }
-                    }
-            }
-            Console.WriteLine("\n");
+            }));
+            watch.Stop();
+            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate array");
             return values;
+            
         }
+
 
         public static RGB[,] GenerateRGBArray(double[,] array)
         {
-            int width = array.GetLength(0);
-            int height = array.GetLength(1);
             RGB[,] RGBArray = new RGB[width, height];
             Console.WriteLine("Converting to RGB");
             using (var progress = new ProgressBar()) 
@@ -202,30 +223,34 @@ namespace MapGenerator
         {
             List<int> min = new List<int>{};
             List<int> max = new List<int>{};
+            int amountWater = (int)(limit * proportions[0]);
+            int amountBeach = (int)(limit * proportions[1]) + amountWater;
+            int amountForest = (int)(limit * proportions[2]) + amountBeach;
+            int amountMountain = limit;
             double adjustedRawValue;
-            if (valueRaw <= 250) //water
+            if (valueRaw <= amountWater) //water
             {
                 min.AddRange(new int[] {0, 14, 36});
                 max.AddRange(new int[] {0, 77, 201});
-                adjustedRawValue = GetAdjustedRawValue(valueRaw, 0, 250);
+                adjustedRawValue = GetAdjustedRawValue(valueRaw, 0, amountWater);
             }
-            else if (valueRaw <= 275) //desert
+            else if (valueRaw <= amountBeach) //beach
             {
                 min.AddRange(new int[] {192, 199, 0});
                 max.AddRange(new int[] {255, 255, 0});
-                adjustedRawValue = GetAdjustedRawValue(valueRaw, 251, 275);
+                adjustedRawValue = GetAdjustedRawValue(valueRaw, amountWater+1, amountBeach);
             }
-            else if (valueRaw <= 400) //grassland/woodland
+            else if (valueRaw <= amountForest) //grassland/woodland
             {
                 min.AddRange(new int[] {125, 279, 0});
                 max.AddRange(new int[] {83, 179, 0});
-                adjustedRawValue = GetAdjustedRawValue(valueRaw, 276, 400);
+                adjustedRawValue = GetAdjustedRawValue(valueRaw, amountBeach+1, amountForest);
             }
             else //mountain
             {
                 min.AddRange(new int[] {150, 150, 150});
                 max.AddRange(new int[] {50, 50, 50});
-                adjustedRawValue = GetAdjustedRawValue(valueRaw, 401, 500);
+                adjustedRawValue = GetAdjustedRawValue(valueRaw, amountForest+1, amountMountain);
             }
             return ConvertToRGB(adjustedRawValue, min, max);
         }
@@ -255,7 +280,7 @@ namespace MapGenerator
             return (int)tempValue;
         }
     
-        public static Bitmap GenerateBMP(RGB[,] RGBArray, int resolution)
+        public static Bitmap GenerateBMP(RGB[,] RGBArray)
         {
             int width = RGBArray.GetLength(0);
             int height = RGBArray.GetLength(1);
@@ -286,9 +311,9 @@ namespace MapGenerator
     
         public static Int32 Seed()
         {
-            //Console.WriteLine("Enter seed: ");
-            //string? input = Console.ReadLine();
-            string? input = "";
+            Console.WriteLine("Enter seed: ");
+            string? input = Console.ReadLine();
+            //string? input = "";
             string output;
             int numericalOutput;
             Int32 seed;

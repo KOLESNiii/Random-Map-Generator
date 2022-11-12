@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "ItmXdWlcUW8o2gC4MdYfk3iQdvEEErECr6hbjG56EbIXex0lm/Cdj4X7wcTiODV5huRTOwy1srFpCmM13usAIQ==",
+  "dgSpecHash": "Ft+bx6+i7utci0RGaORchOiVZrohQjc3WSPm54Q4oarTPGTwwmt0x2KJtLq6QEQayVJbWtTxrZE0nvH9CGq8Dg==",
   "success": true,
-  "projectFilePath": "C:\\Users\\timko\\OneDrive - Altrincham Grammar School for Boys\\Programs\\C#\\Perlin Map\\Perlin Map.csproj",
+  "projectFilePath": "C:\\Users\\timko\\OneDrive - Altrincham Grammar School for Boys\\Programs\\C#\\Map Generator\\Perlin Map.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\timko\\.nuget\\packages\\microsoft.win32.systemevents\\7.0.0\\microsoft.win32.systemevents.7.0.0.nupkg.sha512",
     "C:\\Users\\timko\\.nuget\\packages\\system.drawing.common\\7.0.0\\system.drawing.common.7.0.0.nupkg.sha512"

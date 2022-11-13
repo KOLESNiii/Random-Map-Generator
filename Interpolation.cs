@@ -2,7 +2,7 @@ namespace SimplexNoise
 {
     static class Interpolation
     {
-        public static double sumOctave(int num_iterations, int x, int y, float persistence, float scale, int low, int high)
+        public static double sumOctave(int num_iterations, long x, long y, float persistence, float scale, int low, int high)
         {
             var freq = scale;
             //float freq = 1.0f;

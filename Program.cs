@@ -7,14 +7,16 @@ using System.Runtime.Versioning;
 
 namespace MapGenerator
 {
-    class RGB
+    class Point
     {
-        public RGB(int r, int g, int b)
+        public Point(int xin, int yin)
         {
-            R = r;
-            G = g;
-            B = b;
+            x = xin;
+            y = yin;
         }
+        public int x;
+        public int y;
+        public int value = 0;
         private int r;
         public int R
         {
@@ -105,20 +107,6 @@ namespace MapGenerator
             }
         }
 
-
-    }
-
-    class Point
-    {
-        public Point(int xin, int yin, int valuein)
-        {
-            x = xin;
-            y = yin;
-            value = valuein;
-        }
-        public int x;
-        public int y;
-        public int value;
     }
     [SupportedOSPlatform("windows")]
     class MapGenerator
@@ -136,8 +124,8 @@ namespace MapGenerator
         
         {
             Random rand = new Random();
-            width = 4000;
-            height = 2000;
+            width = 20000;
+            height = 10000;
             resolution = 1;
             int randomInt = rand.Next(1, 7);
             int randomInt2 = rand.Next(45, 55);
@@ -149,18 +137,22 @@ namespace MapGenerator
             proportions.Add(0.21); //forest/grassland
             proportions.Add(0.07);
             Console.WriteLine($"Seed: {Seed()}");
-            double[,] valuesRaw = GenerateArray();
-            RGB[,] RGBArray = GenerateRGBArray(valuesRaw);
-            Bitmap bmp = GenerateBMP(RGBArray);
-
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
+            List<Point> pointList = GenerateEmptyArray();
+            GenerateSimplexNoise(pointList);
+            GenerateRGBValues(pointList);
+            Bitmap bmp = GenerateBMP(pointList);
             SaveImage(bmp, "noiseMap.png");
+            watch.Stop();
+            Console.WriteLine($"Finished creating map\nTook {watch.ElapsedMilliseconds}ms to create random map\nPress [enter] to terminate");
+            Console.ReadLine();
         }
 
         public static bool Validation(string? input, out int numericalValue)
         {
             return Int32.TryParse(input, out numericalValue);
         }
-
         public static bool Validation(string? input, out string value)
         {
             if (String.IsNullOrEmpty(input))
@@ -174,52 +166,52 @@ namespace MapGenerator
                 return false;
             }
         }
-
         public static void SaveImage( Bitmap image, string path)
         {
             image.Save(path, ImageFormat.Png);
         }
-
-        public static double[,] GenerateArray()
+        public static List<Point> GenerateEmptyArray()
         {
-            double[,] values = new double[width, height];
+            Console.Write("Creating new point array...");
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
+            List<Point> array = new List<Point>();
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    array.Add(new Point(x, y));
+                }
+            }
+            watch.Stop();
+            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to create point array");
+            return array;
+        }
+        public static void GenerateSimplexNoise(List<Point> array)
+        {
             Console.Write("Creating noise using SimplexNoise...");
             var watch = new System.Diagnostics.Stopwatch();
             watch.Start();
-            Parallel.For(0, width, x => Parallel.For(0, height, y =>
+            Parallel.ForEach(array, point =>
             {
-                values[x,y] = (int)SimplexNoise.Interpolation.sumOctave(8, x, y, persistence, scale, 0, limit);
+                point.value = (int)SimplexNoise.Interpolation.sumOctave(8, point.x, point.y, persistence, scale, 0, limit);
 
-            }));
+            });
             watch.Stop();
-            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate array");
-            return values;
+            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate simplex noise");
             
         }
-
-
-        public static RGB[,] GenerateRGBArray(double[,] array)
+        public static void GenerateRGBValues(List<Point> array)
         {
-            RGB[,] RGBArray = new RGB[width, height];
-            Console.WriteLine("Converting to RGB");
-            using (var progress = new ProgressBar()) 
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        RGBArray[x,y] = GetRGBValue(array[x,y]);
-                        progress.Report((double) (x*height+y)/(width*height));
-                    }
-                    
-                }
-            }
-            Console.WriteLine("\n");
-            return RGBArray;
+            Console.WriteLine("Converting to array to RGB...");
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
+            Parallel.ForEach(array, point => GetRGBValue(point));
+            watch.Stop();
+            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to convert array");
 
         }
-
-        public static RGB GetRGBValue(double valueRaw)
+        public static void GetRGBValue(Point point)
         {
             List<int> min = new List<int>{};
             List<int> max = new List<int>{};
@@ -228,50 +220,51 @@ namespace MapGenerator
             int amountForest = (int)(limit * proportions[2]) + amountBeach;
             int amountMountain = limit;
             double adjustedRawValue;
-            if (valueRaw <= amountWater) //water
+            if (point.value <= amountWater) //water
             {
                 min.AddRange(new int[] {0, 14, 36});
                 max.AddRange(new int[] {0, 77, 201});
-                adjustedRawValue = GetAdjustedRawValue(valueRaw, 0, amountWater);
+                adjustedRawValue = GetAdjustedRawValue(point.value, 0, amountWater);
             }
-            else if (valueRaw <= amountBeach) //beach
+            else if (point.value <= amountBeach) //beach
             {
                 min.AddRange(new int[] {192, 199, 0});
                 max.AddRange(new int[] {255, 255, 0});
-                adjustedRawValue = GetAdjustedRawValue(valueRaw, amountWater+1, amountBeach);
+                adjustedRawValue = GetAdjustedRawValue(point.value, amountWater+1, amountBeach);
             }
-            else if (valueRaw <= amountForest) //grassland/woodland
+            else if (point.value <= amountForest) //grassland/woodland
             {
                 min.AddRange(new int[] {125, 279, 0});
                 max.AddRange(new int[] {83, 179, 0});
-                adjustedRawValue = GetAdjustedRawValue(valueRaw, amountBeach+1, amountForest);
+                adjustedRawValue = GetAdjustedRawValue(point.value, amountBeach+1, amountForest);
             }
             else //mountain
             {
                 min.AddRange(new int[] {150, 150, 150});
                 max.AddRange(new int[] {50, 50, 50});
-                adjustedRawValue = GetAdjustedRawValue(valueRaw, amountForest+1, amountMountain);
+                adjustedRawValue = GetAdjustedRawValue(point.value, amountForest+1, amountMountain);
             }
-            return ConvertToRGB(adjustedRawValue, min, max);
+            var channelValues = ConvertToRGB(adjustedRawValue, min, max);
+            for (int i = 0; i < 3; i++)
+            {
+                point.SetRGB(i, channelValues[i]);
+            }
         }
-
         public static double GetAdjustedRawValue(double valueRaw, int min, int max)
         {
             int range = max - min;
             double tempRawValue = valueRaw - min;
             return (tempRawValue/range);
         }
-
-        public static RGB ConvertToRGB(double valueRaw, List<int> min, List<int> max)
+        public static List<int> ConvertToRGB(double valueRaw, List<int> min, List<int> max)
         {
-            RGB rgb = new RGB(0,0,0);
+            List<int> rgb = new List<int>();
             for (int i = 0; i < 3; i++)
             {
-                rgb.SetRGB(i, Normalize(valueRaw, min[i], max[i]));
+                rgb.Add(Normalize(valueRaw, min[i], max[i]));
             }
             return rgb;
         }
-
         public static int Normalize(double valueRaw, int min, int max)
         {
             int range = max - min;
@@ -279,33 +272,30 @@ namespace MapGenerator
             tempValue += (max > min) ? min : max;
             return (int)tempValue;
         }
-    
-        public static Bitmap GenerateBMP(RGB[,] RGBArray)
+        public static Bitmap GenerateBMP(List<Point> array)
         {
-            int width = RGBArray.GetLength(0);
-            int height = RGBArray.GetLength(1);
             Bitmap bmp = new Bitmap(width*resolution, height*resolution);
-            Console.WriteLine("Converting to Bitmap");
+            Console.WriteLine("Converting to Bitmap...");
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
+            int count = 0;
             using (var progress = new ProgressBar())
             {
-                for (int x = 0; x < width*resolution; x+= resolution)
+                foreach (Point point in array)
                 {
-                    for (int y = 0; y < height*resolution; y+= resolution)
+                    for (int x = 0; x < resolution; x++)
                     {
-                        for (int ix = 0; ix < resolution; ix++)
+                        for (int y = 0; y < resolution; y++)
                         {
-                            for (int iy = 0; iy < resolution; iy++)
-                            {
-                                RGB pixel = RGBArray[x,y];
-                                bmp.SetPixel(x + ix, y + iy, Color.FromArgb(pixel.R, pixel.G, pixel.B));
-                            }
-                            
+                            bmp.SetPixel(point.x*resolution + x, point.y*resolution + y, Color.FromArgb(point.R, point.G, point.B));
                         }
-                        progress.Report((double) (x*height*resolution+y)/(width*height*resolution*resolution));
                     }
+                    count += 1;
+                    progress.Report((double) (count)/(width*height));
                 }
             }
-            Console.WriteLine("\n");
+            watch.Stop();
+            Console.WriteLine($"\nTook {watch.ElapsedMilliseconds}ms to convert to bitmap");
             return bmp;
         }
     

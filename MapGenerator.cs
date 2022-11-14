@@ -3,6 +3,7 @@ using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using System.Diagnostics;
 using System.IO;
+using ImageMagick;
 
 namespace MapGenerator
 {
@@ -11,13 +12,13 @@ namespace MapGenerator
     {
         static Generator()
         {
-            Width = 1000; //more than 10000 either direction is breaking (for 16gb ram anyway!)
-            Height = 1000;
+            Width = 1024; //more than 10000 either direction is breaking (for 16gb ram anyway!)
+            Height = 1024;
             Resolution = 1;
             scale.AddRange(new List<float> {0.0001f, 0.0007f, 0.001f}); //bigger this number, the smaller the individual biome is
             //scaleContinents = 0.0007f; //noice for islands
             persistence.AddRange(new List<float> {0.45f, 0.50f, 0.50f}); //smaller number means smoother, larger is more jagged
-            landformMultipliers.AddRange(new List<double> {1.0, 0.5, 0.4});
+            landformMultipliers.AddRange(new List<double> {1.0, 0.5, 0.2});
             limit = 1000;
             proportions.AddRange(new List<double> {0.52, 0.015, 0.20, 0.265}); //water;beach;forest;mountains
             amounts.Add((int)(limit * proportions[0]));
@@ -27,7 +28,7 @@ namespace MapGenerator
             passTypes.AddRange(new List<string> {"continents", "medium land features", "small land features"});
             numPasses = passTypes.Count;
             maxPasses = 3; //testing
-            combinedImages.AddRange(new List<int> {1,1});
+            combinedImages.AddRange(new List<int> {1,1}); 
 
         }
         public static int limit;
@@ -59,6 +60,15 @@ namespace MapGenerator
             MakeEmptyImageFolder();
             var watch = new Stopwatch();
             watch.Start();
+            long sumTimes = 0;
+            if ((int)combinedImages[0]*width*resolution * (int)combinedImages[1]*width*resolution > 700000000)
+            {
+                throw new ArgumentOutOfRangeException("Area of map must not exceed 484,000,000");
+            }
+            if ((int)combinedImages[0]*width*resolution > 65500 || (int)combinedImages[1]*width*resolution > 65500)
+            {
+                throw new ArgumentOutOfRangeException("Cannot have a dimension greater that 65500");
+            }
             for (int x = 0; x < (int)combinedImages[0]*width*resolution; x+= (int)width*resolution)
             {
                 for (int y = 0; y < (int)combinedImages[1]*width*resolution; y+= (int)height*resolution)
@@ -74,19 +84,21 @@ namespace MapGenerator
                     imageCount ++;
                     watchSmall.Stop();
                     imageCoords.Add(new Img(x, y, imageCount-1));
-                    Console.WriteLine($"Took {watchSmall.ElapsedMilliseconds}ms to generate map {imageCount}/{combinedImages[0]*combinedImages[1]}...\n{imageCount*100/(combinedImages[0]*combinedImages[1])}% complete");
-                    //Console.WriteLine($"x:{x}, xLimit:{(int)combinedImages[0]*width*resolution}, truth:{x<(int)combinedImages[0]*width*resolution}");
-                    //Console.WriteLine($"x:{y}, xLimit:{(int)combinedImages[1]*height*resolution}, truth:{y<(int)combinedImages[1]*height*resolution}");
-                    //Thread.Sleep(1500);
+                    sumTimes += watchSmall.ElapsedMilliseconds;
+                    var avgTimeMS = sumTimes/imageCount;
+                    var ETAms = avgTimeMS * (combinedImages[0]*combinedImages[1] - imageCount); 
+                    var ETAs = (int)ETAms / 1000;
+                    var ETAm = ETAs / 60;
+                    ETAs %= 60;
+                    Console.WriteLine($"Generated map {imageCount}/{combinedImages[0]*combinedImages[1]}...\n{imageCount*100/(combinedImages[0]*combinedImages[1])}% complete...ETA {ETAm} min {ETAs} s");
 
                 }
             }
-            Console.WriteLine("Loading all images, preparing to join...");
-            LoadImages();
-            
-            
+            Console.WriteLine("Joining all images...");
+            ConvertToOneLarge();
+            ClearPartImages();
             watch.Stop();
-            Console.WriteLine($"Finished creating map\nTook {watch.ElapsedMilliseconds}ms to create all maps");
+            Console.WriteLine($"Finished creating map\nTook {watch.ElapsedMilliseconds}ms to create all maps\n");
         }
         public static bool Validation(string? input, out int numericalValue)
         {
@@ -119,6 +131,7 @@ namespace MapGenerator
         }
         public static void LoadImages()
         {
+            Console.WriteLine("Combining all images...");
             var watch = new Stopwatch();
             watch.Start();
             string[] imagePaths = Directory.GetFiles(imageFolderPath, "*.png", SearchOption.TopDirectoryOnly);
@@ -131,7 +144,6 @@ namespace MapGenerator
                     int num = 0;
                     for (int i = lastIndex-1; i >= 0; i--)
                     {
-                        Console.WriteLine(path.Substring(i, 1));
                         if (path.Substring(i,1) == "-")
                         {
                             break;
@@ -152,17 +164,75 @@ namespace MapGenerator
                 {
                     throw new FileNotFoundException("No valid png file for generating one image, reload");
                 }
-                Console.WriteLine(fileName[0]);
                 coord.image = Image.FromFile(fileName[0]);
             });
             var bmp = CombineImages();
             SaveImage(bmp, "finalImage");
+            //ClearPartImages();
             watch.Stop();
-            Console.WriteLine($"Found {imagePaths.Length} files in {watch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Combined {imagePaths.Length} files in {watch.ElapsedMilliseconds}ms");
         }
-
+        public static void ConvertToOneLarge()
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+            string[] imagePaths = Directory.GetFiles(imageFolderPath, "*.png", SearchOption.TopDirectoryOnly);
+            using (Bitmap bmp = new Bitmap((int)(width*Resolution*combinedImages[0]), (int)(height*Resolution*combinedImages[1]), PixelFormat.Format24bppRgb))
+            {
+                using (Graphics g = Graphics.FromImage(bmp))
+                {   
+                    int count = 0;
+                    foreach (Img coord in imageCoords)
+                    {   
+                        var watchSmall = new Stopwatch();
+                        watchSmall.Start();
+                        var fileName = imagePaths.AsParallel().Where(path => 
+                        {
+                            int lastIndex = path.Length-5;
+                            int firstIndex = lastIndex;
+                            int num = 0;
+                            for (int i = lastIndex-1; i >= 0; i--)
+                            {
+                                if (path.Substring(i,1) == "-")
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    firstIndex--;
+                                }
+                            }
+                            bool isNum = Int32.TryParse(path.Substring(firstIndex, lastIndex-firstIndex+1), out num);
+                            return (num == coord.imageNum && isNum);
+                            }).ToList();
+                        if (fileName is null)
+                        {
+                            throw new FileNotFoundException("No valid png file for generating one image, reload");
+                        }
+                        else if (fileName.Count == 0)
+                        {
+                            throw new FileNotFoundException("No valid png file for generating one image, reload");
+                        }
+                        var image = Image.FromFile(fileName[0]);
+                        g.DrawImage(image, coord.tl[0], coord.tl[1]);
+                        watchSmall.Stop();
+                        count ++;
+                        Console.WriteLine($"Joined image {count}/{imageCoords.Count} in {watchSmall.ElapsedMilliseconds}ms, {(int)count*100/imageCoords.Count}% complete...");
+                    }
+                }
+                watch.Stop();
+                Console.WriteLine($"Finished combining all images in {watch.ElapsedMilliseconds}ms");
+                string path = Path.Combine(imageFolderPath, "mainImage.png");
+                Bitmap tempBitmap = bmp;
+                tempBitmap.Save(path, ImageFormat.Png);
+                //SaveImage(bmp, "MAINimage");
+            }
+        }
         public static void ClearPartImages()
         {
+            Console.WriteLine("Deleting residual files...");
+            var watch = new Stopwatch();
+            watch.Start();
             var images = Directory.GetFiles(imageFolderPath, "*.png");
             int tempNum;
             List<string> pathsToDelete = new List<string>();
@@ -180,18 +250,31 @@ namespace MapGenerator
             {
                 File.Delete(path);
             }
+            watch.Stop();
+            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to delete residual files");
         }
 
         public static Bitmap CombineImages()
         {
             Bitmap bmp = new Bitmap((int)(width*Resolution*combinedImages[0]), (int)(height*Resolution*combinedImages[1]));
+            Console.WriteLine("Combining all images...");
+            int count = 0;
+            var watch = new Stopwatch();
+            watch.Start();
             using (Graphics g = Graphics.FromImage(bmp))
             {
                 foreach (Img coord in imageCoords)
                 {
+                    var watchSmall = new Stopwatch();
+                    watchSmall.Start();
                     g.DrawImage(coord.image, coord.tl[0], coord.tl[1]);
+                    watchSmall.Stop();
+                    count ++;
+                    Console.WriteLine($"Finished combining image {coord.imageNum}...{(double) count / imageCoords.Count}% complete");
                 }
             }
+            watch.Stop();
+            Console.WriteLine($"Took {watch.ElapsedMilliseconds} to combine all images");
             return bmp;
         }
         public static List<Point> GenerateEmptyArray()
@@ -322,7 +405,9 @@ namespace MapGenerator
         }
         public static Bitmap GenerateBMP(List<Point> array)
         {
-            Bitmap bmp = new Bitmap((int)width*resolution, (int)height*resolution);
+            Bitmap bmp = new Bitmap((int)width*resolution, (int)height*resolution, PixelFormat.Format24bppRgb);
+            //var m = new MagickFactory();
+            
             Console.WriteLine("Converting to Bitmap...");
             var watch = new Stopwatch();
             watch.Start();
@@ -342,8 +427,9 @@ namespace MapGenerator
                     progress.Report((double) (count)/(width*height));
                 }
             }
+            MagickImage image = new MagickImage();
             watch.Stop();
-            Console.WriteLine($"\nTook {watch.ElapsedMilliseconds}ms to convert to bitmap");
+            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to convert to bitmap");
             return bmp;
         }
         public static Int32 NewSeed()

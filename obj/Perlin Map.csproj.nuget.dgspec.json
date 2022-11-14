@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\timko\\Documents\\OD\\Programs\\C#\\Map Generator\\Perlin Map.csproj": {}
+    "C:\\Users\\timko\\OneDrive - Altrincham Grammar School for Boys\\Programs\\C#\\Map Generator\\Perlin Map.csproj": {}
   },
   "projects": {
-    "C:\\Users\\timko\\Documents\\OD\\Programs\\C#\\Map Generator\\Perlin Map.csproj": {
+    "C:\\Users\\timko\\OneDrive - Altrincham Grammar School for Boys\\Programs\\C#\\Map Generator\\Perlin Map.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\timko\\Documents\\OD\\Programs\\C#\\Map Generator\\Perlin Map.csproj",
+        "projectUniqueName": "C:\\Users\\timko\\OneDrive - Altrincham Grammar School for Boys\\Programs\\C#\\Map Generator\\Perlin Map.csproj",
         "projectName": "Perlin Map",
-        "projectPath": "C:\\Users\\timko\\Documents\\OD\\Programs\\C#\\Map Generator\\Perlin Map.csproj",
+        "projectPath": "C:\\Users\\timko\\OneDrive - Altrincham Grammar School for Boys\\Programs\\C#\\Map Generator\\Perlin Map.csproj",
         "packagesPath": "C:\\Users\\timko\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\timko\\Documents\\OD\\Programs\\C#\\Map Generator\\obj\\",
+        "outputPath": "C:\\Users\\timko\\OneDrive - Altrincham Grammar School for Boys\\Programs\\C#\\Map Generator\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -45,6 +45,18 @@
         "net7.0": {
           "targetAlias": "net7.0",
           "dependencies": {
+            "Magick.NET-Q8-AnyCPU": {
+              "target": "Package",
+              "version": "[12.2.1, )"
+            },
+            "Magick.NET.Core": {
+              "target": "Package",
+              "version": "[12.2.1, )"
+            },
+            "Magick.NET.SystemDrawing": {
+              "target": "Package",
+              "version": "[6.1.2, )"
+            },
             "System.Drawing.Common": {
               "target": "Package",
               "version": "[7.0.0, )"

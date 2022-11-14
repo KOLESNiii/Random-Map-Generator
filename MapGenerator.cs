@@ -70,7 +70,8 @@ namespace MapGenerator
                     GenerateSimplexNoise(pointList, x, y);
                     GenerateRGBValues(pointList);
                     Bitmap bmp = GenerateBMP(pointList);
-                    SaveImage(bmp, "noiseMap");
+                    SaveImage(bmp, $"noiseMap-{imageCount}");
+                    imageCount ++;
                     watchSmall.Stop();
                     imageCoords.Add(new Img(x, y, imageCount-1));
                     Console.WriteLine($"Took {watchSmall.ElapsedMilliseconds}ms to generate map {imageCount}/{combinedImages[0]*combinedImages[1]}...\n{imageCount*100/(combinedImages[0]*combinedImages[1])}% complete");
@@ -106,9 +107,8 @@ namespace MapGenerator
         }
         public static void SaveImage( Bitmap image, string imageName)
         {
-            string path = Path.Combine(imageFolderPath, $"{imageName}-{imageCount}.png");
+            string path = Path.Combine(imageFolderPath, $"{imageName}.png");
             image.Save(path, ImageFormat.Png);
-            imageCount += 1;
         }
         private static void MakeEmptyImageFolder()
         {
@@ -155,18 +155,44 @@ namespace MapGenerator
                 Console.WriteLine(fileName[0]);
                 coord.image = Image.FromFile(fileName[0]);
             });
-            /*
-
-
-                TODO: Combine images into one
-
-
-
-            */
+            var bmp = CombineImages();
+            SaveImage(bmp, "finalImage");
             watch.Stop();
             Console.WriteLine($"Found {imagePaths.Length} files in {watch.ElapsedMilliseconds}ms");
+        }
 
+        public static void ClearPartImages()
+        {
+            var images = Directory.GetFiles(imageFolderPath, "*.png");
+            int tempNum;
+            List<string> pathsToDelete = new List<string>();
+            foreach (string imagePath in images)
+            {
+                for (int i = 0; i < imagePath.Length; i++)
+                {
+                    if (Int32.TryParse(imagePath.Substring(i,1), out tempNum))
+                    {
+                        pathsToDelete.Add(imagePath);
+                    }
+                }
+            }
+            foreach (string path in pathsToDelete)
+            {
+                File.Delete(path);
+            }
+        }
 
+        public static Bitmap CombineImages()
+        {
+            Bitmap bmp = new Bitmap((int)(width*Resolution*combinedImages[0]), (int)(height*Resolution*combinedImages[1]));
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                foreach (Img coord in imageCoords)
+                {
+                    g.DrawImage(coord.image, coord.tl[0], coord.tl[1]);
+                }
+            }
+            return bmp;
         }
         public static List<Point> GenerateEmptyArray()
         {

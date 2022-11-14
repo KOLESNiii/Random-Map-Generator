@@ -1,31 +1,42 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.Versioning;
+using System.Diagnostics;
+using System.IO;
 
 namespace MapGenerator
 {
+    [SupportedOSPlatform("windows")]
     static class Generator
     {
         static Generator()
         {
-            width = 10000;
-            height = 10000;
-            resolution = 1;
-            scale!.AddRange(new List<float> {0.0001f, 0.0007f, 0.007f}); //bigger this number, the smaller the individual biome is
+            Width = 1000; //more than 10000 either direction is breaking (for 16gb ram anyway!)
+            Height = 1000;
+            Resolution = 2;
+            scale.AddRange(new List<float> {0.0001f, 0.0007f, 0.001f}); //bigger this number, the smaller the individual biome is
             //scaleContinents = 0.0007f; //noice for islands
-            persistence!.AddRange(new List<float> {0.45f, 0.50f, 0.55f}); //smaller number means smoother, larger is more jagged
+            persistence.AddRange(new List<float> {0.45f, 0.50f, 0.50f}); //smaller number means smoother, larger is more jagged
+            landformMultipliers.AddRange(new List<double> {1.0, 0.5, 0.4});
             limit = 1000;
-            proportions.AddRange(new List<double> {0.55, 0.015, 0.29, 0.145}); //water;beach;forest;mountains
+            proportions.AddRange(new List<double> {0.52, 0.015, 0.20, 0.265}); //water;beach;forest;mountains
             amounts.Add((int)(limit * proportions[0]));
             amounts.Add((int)(limit * proportions[1]) + amounts[0]);
             amounts.Add((int)(limit * proportions[2]) + amounts[1]);
             amounts.Add((int) limit);
             passTypes.AddRange(new List<string> {"continents", "medium land features", "small land features"});
             numPasses = passTypes.Count;
+            maxPasses = 3; //testing
+            combinedImages.AddRange(new List<int> {2,2});
+
         }
         public static int limit;
         public static List<double> proportions = new List<double>();
-        public static List<float> persistence;
-        public static List<float> scale;
+        public static List<float> persistence = new List<float>();
+        public static List<float> scale = new List<float>();
+        public static List<double> landformMultipliers = new List<double>();
+        public static List<int> combinedImages = new List<int>();
+        public static int imageCount = 0;
         public static int resolution;
         public static int Resolution
         {get{return resolution;} set{resolution = (value >= 0) ? value : 0;}}
@@ -38,7 +49,44 @@ namespace MapGenerator
         public static List<int> amounts = new List<int>();
         public static List<string> passTypes = new List<string>();
         public static int numPasses;
+        public static int maxPasses; //for testing
+        public static string imageFolderPath = "";
+        private static List<Img> imageCoords = new List<Img>();
 
+        public static void MakeMap()
+        {
+            Console.WriteLine($"Seed: {NewSeed()}");
+            MakeEmptyImageFolder();
+            var watch = new Stopwatch();
+            watch.Start();
+            for (int x = 0; x < (int)combinedImages[0]*width*resolution; x+= (int)width*resolution)
+            {
+                for (int y = 0; y < (int)combinedImages[1]*width*resolution; y+= (int)height*resolution)
+                {
+                    Console.WriteLine($"Generating map {imageCount+1}/{combinedImages[0]*combinedImages[1]}...");
+                    var watchSmall = new Stopwatch();
+                    watchSmall.Start();
+                    var pointList = GenerateEmptyArray();
+                    GenerateSimplexNoise(pointList, x, y);
+                    GenerateRGBValues(pointList);
+                    Bitmap bmp = GenerateBMP(pointList);
+                    SaveImage(bmp, "noiseMap");
+                    watchSmall.Stop();
+                    imageCoords.Add(new Img(x, y, imageCount-1));
+                    Console.WriteLine($"Took {watchSmall.ElapsedMilliseconds}ms to generate map {imageCount}/{combinedImages[0]*combinedImages[1]}...\n{imageCount*100/(combinedImages[0]*combinedImages[1])}% complete");
+                    //Console.WriteLine($"x:{x}, xLimit:{(int)combinedImages[0]*width*resolution}, truth:{x<(int)combinedImages[0]*width*resolution}");
+                    //Console.WriteLine($"x:{y}, xLimit:{(int)combinedImages[1]*height*resolution}, truth:{y<(int)combinedImages[1]*height*resolution}");
+                    //Thread.Sleep(1500);
+
+                }
+            }
+            Console.WriteLine("Loading all images, preparing to join...");
+            LoadImages();
+            
+            
+            watch.Stop();
+            Console.WriteLine($"Finished creating map\nTook {watch.ElapsedMilliseconds}ms to create all maps");
+        }
         public static bool Validation(string? input, out int numericalValue)
         {
             return Int32.TryParse(input, out numericalValue);
@@ -56,23 +104,75 @@ namespace MapGenerator
                 return false;
             }
         }
-        public static void SaveImage( Bitmap image, string path)
+        public static void SaveImage( Bitmap image, string imageName)
         {
+            string path = Path.Combine(imageFolderPath, $"{imageName}-{imageCount}.png");
             image.Save(path, ImageFormat.Png);
+            imageCount += 1;
+        }
+        private static void MakeEmptyImageFolder()
+        {
+            string currentDir = Directory.GetCurrentDirectory();
+            imageFolderPath = Path.Combine(currentDir, "images\\");
+            Directory.CreateDirectory(imageFolderPath);
+            Array.ForEach(Directory.GetFiles(imageFolderPath, "*.png", SearchOption.TopDirectoryOnly), delegate(string path) {File.Delete(path);});
+        }
+        public static void LoadImages()
+        {
+            var watch = new Stopwatch();
+            watch.Start();
+            string[] imagePaths = Directory.GetFiles(imageFolderPath, "*.png", SearchOption.TopDirectoryOnly);
+            Parallel.ForEach(imageCoords, coord =>
+            {
+                var fileName = imagePaths.Where(path => 
+                {
+                    int lastIndex = path.Length-5;
+                    int firstIndex = lastIndex;
+                    int num = 0;
+                    for (int i = lastIndex-1; i >= 0; i--)
+                    {
+                        Console.WriteLine(path.Substring(i, 1));
+                        if (path.Substring(i,1) == "-")
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            firstIndex--;
+                        }
+                    }
+                    Int32.TryParse(path.Substring(firstIndex, lastIndex-firstIndex+1), out num);
+                    return num == coord.imageNum;
+                }).ToList();
+                if (fileName is null)
+                {
+                    throw new FileNotFoundException("No valid png file for generating one image, reload");
+                }
+                else if (fileName.Count == 0)
+                {
+                    throw new FileNotFoundException("No valid png file for generating one image, reload");
+                }
+                Console.WriteLine(fileName[0]);
+                coord.image = Image.FromFile(fileName[0]);
+            });
+            /*
+
+
+                TODO: Combine images into one
+
+
+
+            */
+            watch.Stop();
+            Console.WriteLine($"Found {imagePaths.Length} files in {watch.ElapsedMilliseconds}ms");
+
+
         }
         public static List<Point> GenerateEmptyArray()
         {
             Console.Write("Creating new point array...");
-            var watch = new System.Diagnostics.Stopwatch();
+            var watch = new Stopwatch();
             watch.Start();
-            /*List<Point> array = new List<Point>();
-            for (int x = 0; x < width; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    array.Add(new Point(x, y));
-                }
-            }*/
             Point[] tempArray = new Point[width*height];
             Parallel.For(0, width, x => Parallel.For(0, height, y =>
             {
@@ -84,36 +184,52 @@ namespace MapGenerator
             Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to create point array");
             return array;
         }
-        public static void GenerateSimplexNoise(List<Point> array)
+        public static void GenerateSimplexNoise(List<Point> array, int xOffset, int yOffset)
         {
             Console.WriteLine("Generating map using SimplexNoise...");
-            var watch = new System.Diagnostics.Stopwatch();
+            var watch = new Stopwatch();
             watch.Start();
-            for (int i = 0; i < numPasses; i++)
+            for (int i = 0; i < Math.Min(numPasses, maxPasses); i++)
             {
-                GenerateFeatures(array, i);
+                GenerateFeatures(array, i, xOffset, yOffset);
             }
             watch.Stop();
             Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate map using SimplexNoise");
+            AdjustValueRange(array);
         }
-        public static void GenerateFeatures(List<Point> array, int passNumber)
+        public static void GenerateFeatures(List<Point> array, int passNumber, int xOffset, int yOffset)
         {
             Console.Write($"Creating {passTypes[passNumber]} using SimplexNoise...");
-            var watch = new System.Diagnostics.Stopwatch();
+            var watch = new Stopwatch();
             watch.Start();
             Parallel.ForEach(array, point =>
             {
-                point.value += (int)SimplexNoise.Interpolation.sumOctave(8, point.x, point.y, persistence[passNumber], scale[passNumber], 0, limit);
+                point.value += (SimplexNoise.Interpolation.sumOctave(8, point.x+xOffset, point.y+yOffset, persistence[passNumber], scale[passNumber]) * landformMultipliers[passNumber]);
 
             });
             watch.Stop();
             Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate {passTypes[passNumber]} using SimplexNoise");
             
         }
+        public static void AdjustValueRange(List<Point> array)
+        {
+            Console.Write($"Changing the range of point values...");
+            var watch = new Stopwatch();
+            watch.Start();
+            Parallel.ForEach(array, point =>
+            {
+                double maxValue = landformMultipliers.Sum();
+                point.value += maxValue;
+                point.value /= (maxValue * 2);
+                point.value *= limit;
+            });
+            watch.Stop();
+            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to change ranges of point values");
+        }
         public static void GenerateRGBValues(List<Point> array)
         {
             Console.WriteLine("Converting to array to RGB...");
-            var watch = new System.Diagnostics.Stopwatch();
+            var watch = new Stopwatch();
             watch.Start();
             Parallel.ForEach(array, point => GetRGBValue(point));
             watch.Stop();
@@ -122,7 +238,7 @@ namespace MapGenerator
         }
         public static void GetRGBValue(Point point)
         {
-            point.value /= numPasses;
+            //point.value /= (numPasses*((double)(2/3)));
             List<int> min = new List<int>{};
             List<int> max = new List<int>{};
             double adjustedRawValue;
@@ -182,7 +298,7 @@ namespace MapGenerator
         {
             Bitmap bmp = new Bitmap((int)width*resolution, (int)height*resolution);
             Console.WriteLine("Converting to Bitmap...");
-            var watch = new System.Diagnostics.Stopwatch();
+            var watch = new Stopwatch();
             watch.Start();
             int count = 0;
             using (var progress = new ProgressBar())

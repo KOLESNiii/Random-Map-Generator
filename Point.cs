@@ -10,7 +10,7 @@ namespace MapGenerator
         }
         public long x;
         public long y;
-        public int value = 0;
+        public double value = 0;
         private int r;
         public int R
         {

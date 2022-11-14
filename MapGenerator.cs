@@ -12,8 +12,8 @@ namespace MapGenerator
     {
         static Generator()
         {
-            Width = 1024; //more than 10000 either direction is breaking (for 16gb ram anyway!)
-            Height = 1024;
+            Width = 1000; //more than 10000 either direction is breaking (for 16gb ram anyway!)
+            Height = 1000;
             Resolution = 1;
             scale.AddRange(new List<float> {0.0001f, 0.0007f, 0.001f}); //bigger this number, the smaller the individual biome is
             //scaleContinents = 0.0007f; //noice for islands
@@ -28,7 +28,7 @@ namespace MapGenerator
             passTypes.AddRange(new List<string> {"continents", "medium land features", "small land features"});
             numPasses = passTypes.Count;
             maxPasses = 3; //testing
-            combinedImages.AddRange(new List<int> {1,1}); 
+            combinedImages.AddRange(new List<int> {26,26}); 
 
         }
         public static int limit;
@@ -279,7 +279,7 @@ namespace MapGenerator
         }
         public static List<Point> GenerateEmptyArray()
         {
-            Console.Write("Creating new point array...");
+            //Console.Write("Creating new point array...");
             var watch = new Stopwatch();
             watch.Start();
             Point[] tempArray = new Point[width*height];
@@ -290,12 +290,12 @@ namespace MapGenerator
             //List<Point> array = tempArray.ToList(); //29344ms
             List<Point> array = new List<Point>(tempArray); //12055ms
             watch.Stop();
-            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to create point array");
+            //Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to create point array");
             return array;
         }
         public static void GenerateSimplexNoise(List<Point> array, int xOffset, int yOffset)
         {
-            Console.WriteLine("Generating map using SimplexNoise...");
+            //Console.WriteLine("Generating map using SimplexNoise...");
             var watch = new Stopwatch();
             watch.Start();
             for (int i = 0; i < Math.Min(numPasses, maxPasses); i++)
@@ -303,12 +303,12 @@ namespace MapGenerator
                 GenerateFeatures(array, i, xOffset, yOffset);
             }
             watch.Stop();
-            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate map using SimplexNoise");
+            //Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate map using SimplexNoise");
             AdjustValueRange(array);
         }
         public static void GenerateFeatures(List<Point> array, int passNumber, int xOffset, int yOffset)
         {
-            Console.Write($"Creating {passTypes[passNumber]} using SimplexNoise...");
+            //Console.Write($"Creating {passTypes[passNumber]} using SimplexNoise...");
             var watch = new Stopwatch();
             watch.Start();
             Parallel.ForEach(array, point =>
@@ -317,12 +317,12 @@ namespace MapGenerator
 
             });
             watch.Stop();
-            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate {passTypes[passNumber]} using SimplexNoise");
+            //Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to generate {passTypes[passNumber]} using SimplexNoise");
             
         }
         public static void AdjustValueRange(List<Point> array)
         {
-            Console.Write($"Changing the range of point values...");
+            //Console.Write($"Changing the range of point values...");
             var watch = new Stopwatch();
             watch.Start();
             Parallel.ForEach(array, point =>
@@ -333,16 +333,16 @@ namespace MapGenerator
                 point.value *= limit;
             });
             watch.Stop();
-            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to change ranges of point values");
+            //Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to change ranges of point values");
         }
         public static void GenerateRGBValues(List<Point> array)
         {
-            Console.WriteLine("Converting to array to RGB...");
+            //Console.WriteLine("Converting to array to RGB...");
             var watch = new Stopwatch();
             watch.Start();
             Parallel.ForEach(array, point => GetRGBValue(point));
             watch.Stop();
-            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to convert array");
+            //Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to convert array");
 
         }
         public static void GetRGBValue(Point point)
@@ -429,7 +429,7 @@ namespace MapGenerator
             }
             MagickImage image = new MagickImage();
             watch.Stop();
-            Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to convert to bitmap");
+            //Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to convert to bitmap");
             return bmp;
         }
         public static Int32 NewSeed()

@@ -13,7 +13,7 @@ namespace MapGenerator
         {
             Width = 1000; //more than 10000 either direction is breaking (for 16gb ram anyway!)
             Height = 1000;
-            Resolution = 2;
+            Resolution = 1;
             scale.AddRange(new List<float> {0.0001f, 0.0007f, 0.001f}); //bigger this number, the smaller the individual biome is
             //scaleContinents = 0.0007f; //noice for islands
             persistence.AddRange(new List<float> {0.45f, 0.50f, 0.50f}); //smaller number means smoother, larger is more jagged
@@ -27,7 +27,7 @@ namespace MapGenerator
             passTypes.AddRange(new List<string> {"continents", "medium land features", "small land features"});
             numPasses = passTypes.Count;
             maxPasses = 3; //testing
-            combinedImages.AddRange(new List<int> {2,2});
+            combinedImages.AddRange(new List<int> {1,1});
 
         }
         public static int limit;
@@ -96,12 +96,12 @@ namespace MapGenerator
             if (String.IsNullOrEmpty(input))
             {
                 value = "";
-                return true;
+                return false;
             }
             else 
             {
                 value = input;
-                return false;
+                return true;
             }
         }
         public static void SaveImage( Bitmap image, string imageName)
@@ -328,7 +328,7 @@ namespace MapGenerator
             string output;
             int numericalOutput;
             Int32 seed;
-            if (Validation(input, out output))
+            if (!Validation(input, out output))
             {
                 seed = SimplexNoise.Noise.MakeSeededGenerator();
             }
@@ -338,12 +338,8 @@ namespace MapGenerator
             }
             else {
 
-                Int32 seedNumber = 0;
-                foreach (char c in output)
-                {
-                    seedNumber += c-64;
-                }
-                seed = SimplexNoise.Noise.MakeSeededGenerator(seedNumber);
+                
+                seed = SimplexNoise.Noise.MakeSeededGenerator(output);
             }
             return seed;
         }

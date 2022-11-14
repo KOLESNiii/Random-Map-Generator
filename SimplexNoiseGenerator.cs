@@ -312,8 +312,19 @@ namespace SimplexNoise
             return seed;
         }
 
-        public static Int32 MakeSeededGenerator(Int32 seedTemp)
+        public static Int32 MakeSeededGenerator(Int32 seed)
         {
+            Random randSeeded = new Random(seed);
+            GeneratePermArray(randSeeded);
+            return seed;
+        }
+        public static Int32 MakeSeededGenerator(string textSeed)
+        {
+            Int32 seedTemp = 0;
+                foreach (char c in textSeed)
+                {
+                    seedTemp += c-64;
+                }
             Random rand = new Random(seedTemp);
             Int32 seed = rand.Next();
             Random randSeeded = new Random(seed);

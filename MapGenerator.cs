@@ -52,7 +52,6 @@ namespace MapGenerator
             width = hcf;
             height = hcf;
             scale.AddRange(new List<float> {0.0001f, 0.0007f, 0.001f}); //bigger this number, the smaller the individual biome is
-            //scaleContinents = 0.0007f; //noice for islands
             persistence.AddRange(new List<float> {0.45f, 0.50f, 0.50f}); //smaller number means smoother, larger is more jagged
             landformMultipliers.AddRange(new List<double> {1.0, 0.5, 0.2});
             limit = 1000;
@@ -63,7 +62,6 @@ namespace MapGenerator
             amounts.Add((int) limit);
             passTypes.AddRange(new List<string> {"continents", "medium land features", "small land features"});
             numPasses = passTypes.Count;
-            maxPasses = 3; //testing
             
 
         }
@@ -86,11 +84,10 @@ namespace MapGenerator
         public static List<int> amounts = new List<int>();
         public static List<string> passTypes = new List<string>();
         public static int numPasses;
-        public static int maxPasses; //for testing
         public static string imageFolderPath = "";
         private static List<Img> imageCoords = new List<Img>();
 
-        public static void MakeMap()
+        public static void MakeMap(bool clearPartImages = true)
         {
             Console.WriteLine($"Seed: {NewSeed()}");
             MakeEmptyImageFolder();
@@ -112,7 +109,6 @@ namespace MapGenerator
                     imageCount ++;
                     watchSmall.Stop();
                     imageCoords.Add(new Img(x, y, imageCount-1));
-                    Console.WriteLine($"X:{x}, Y:{y}, IMGCOUNT:{imageCount-1}");
                     sumTimes += watchSmall.ElapsedMilliseconds;
                     var avgTimeMS = sumTimes/imageCount;
                     var ETAms = avgTimeMS * (combinedImages[0]*combinedImages[1] - imageCount); 
@@ -125,7 +121,8 @@ namespace MapGenerator
             }
             Console.WriteLine("Joining all images...");
             ConvertToOneLarge();
-            //ClearPartImages();
+            if (clearPartImages)
+            {ClearPartImages();}
             watch.Stop();
             Console.WriteLine($"Finished creating map\nTook {watch.ElapsedMilliseconds}ms to create all maps\n");
         }
@@ -264,10 +261,9 @@ namespace MapGenerator
                 string path = Path.Combine(imageFolderPath, "mainImage.png");
                 Bitmap tempBitmap = bmp;
                 tempBitmap.Save(path, ImageFormat.Png);
-                //SaveImage(bmp, "MAINimage");
             }
         }
-        public static void ClearPartImages()  //need to fix
+        public static void ClearPartImages()
         {
             Console.WriteLine("Deleting residual files...");
             var watch = new Stopwatch();
@@ -277,20 +273,33 @@ namespace MapGenerator
             List<string> pathsToDelete = new List<string>();
             foreach (string imagePath in images)
             {
-                
-                for (int i = 0; i < imagePath.Length; i++)
+                string imagePathAdjusted = PathUtilities.PathUtil.GetRelativePath(imageFolderPath, imagePath);
+                for (int i = 0; i < imagePathAdjusted.Length; i++)
                 {
-                    Console.WriteLine(imagePath.Substring(i,1));
-                    if (Int32.TryParse(imagePath.Substring(i,1), out tempNum))
+                    if (Int32.TryParse(imagePathAdjusted.Substring(i,1), out tempNum))
                     {
                         pathsToDelete.Add(imagePath);
+                        break;
                     }
                 }
             }
-            foreach (string path in pathsToDelete)
+            List<string> deleted = new List<string>();
+            while (pathsToDelete.Count > 0)
             {
-                Console.WriteLine(path);
-                File.Delete(path);
+                foreach (string path in pathsToDelete)
+                {
+                    try
+                    {
+                        File.Delete(path);
+                        deleted.Add(path);
+                    }
+                    catch (System.IO.IOException e){}
+                }
+                foreach (string path in deleted)
+                {
+                    pathsToDelete.Remove(path);
+                }
+                deleted.Clear();
             }
             watch.Stop();
             Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to delete residual files");
@@ -329,7 +338,6 @@ namespace MapGenerator
             {
                 tempArray[x*height+y] = new Point(x,y);
             }));
-            //List<Point> array = tempArray.ToList(); //29344ms
             List<Point> array = new List<Point>(tempArray); //12055ms
             watch.Stop();
             //Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to create point array");
@@ -340,7 +348,7 @@ namespace MapGenerator
             //Console.WriteLine("Generating map using SimplexNoise...");
             var watch = new Stopwatch();
             watch.Start();
-            for (int i = 0; i < Math.Min(numPasses, maxPasses); i++)
+            for (int i = 0; i < numPasses; i++)
             {
                 GenerateFeatures(array, i, xOffset, yOffset);
             }

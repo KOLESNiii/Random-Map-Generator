@@ -12,9 +12,47 @@ namespace MapGenerator
     {
         static Generator()
         {
-            Width = 1000; //more than 10000 either direction is breaking (for 16gb ram anyway!)
-            Height = 1000;
-            Resolution = 1;
+            bool correct = false;
+            while (!correct)
+            {
+                Console.WriteLine("Input width of whole image (int)");
+                Width = Validation(); //more than 10000 either direction is breaking (for 16gb ram anyway!)
+                Console.WriteLine("Input height of whole image (int)");
+                Height = Validation();
+                Console.WriteLine("Enter target pixels per block of map (1 or 2 recommended) (int)");
+                Resolution = Validation();
+                if ((width * height * resolution * resolution) > 700000000)
+                {
+                    Console.WriteLine("The product of the width, height and resolution squared must be less than 700 million");
+                }
+                else if (width * resolution > 65500)
+                {
+                    Console.WriteLine("The product of the width and resolution must be less than 65500");
+                }
+                else if (height * resolution > 65500)
+                {
+                    Console.WriteLine("The product of the height and resolution must be less than 65500");
+                }
+                else
+                {
+                    correct = true;
+                }
+            }
+            int hcf = 1;
+            for (int i = Math.Min(width, height); i > 0; i--)
+            {
+                if(width%i == 0 && height%i == 0)
+                {
+                    hcf = i;
+                    if (hcf <= 5000)
+                    {
+                        break;
+                    }
+                }
+            }
+            combinedImages.AddRange(new List<int> {width/hcf,height/hcf}); 
+            width = hcf;
+            height = hcf;
             scale.AddRange(new List<float> {0.0001f, 0.0007f, 0.001f}); //bigger this number, the smaller the individual biome is
             //scaleContinents = 0.0007f; //noice for islands
             persistence.AddRange(new List<float> {0.45f, 0.50f, 0.50f}); //smaller number means smoother, larger is more jagged
@@ -28,7 +66,7 @@ namespace MapGenerator
             passTypes.AddRange(new List<string> {"continents", "medium land features", "small land features"});
             numPasses = passTypes.Count;
             maxPasses = 3; //testing
-            combinedImages.AddRange(new List<int> {26,26}); 
+            
 
         }
         public static int limit;
@@ -41,11 +79,11 @@ namespace MapGenerator
         public static int resolution;
         public static int Resolution
         {get{return resolution;} set{resolution = (value >= 0) ? value : 0;}}
-        public static Int64 width;
-        public static Int64 Width
+        public static int width;
+        public static int Width
         {get{return width;} set{width = (value >= 0) ? value : 0;} }
-        public static Int64 height;
-        public static Int64 Height
+        public static int height;
+        public static int Height
         {get{return height;} set{height = (value >= 0) ? value : 0;} }
         public static List<int> amounts = new List<int>();
         public static List<string> passTypes = new List<string>();
@@ -61,29 +99,22 @@ namespace MapGenerator
             var watch = new Stopwatch();
             watch.Start();
             long sumTimes = 0;
-            if ((int)combinedImages[0]*width*resolution * (int)combinedImages[1]*width*resolution > 700000000)
+            for (int x = 0; x < combinedImages[0]*width*resolution; x+= width*resolution)
             {
-                throw new ArgumentOutOfRangeException("Area of map must not exceed 484,000,000");
-            }
-            if ((int)combinedImages[0]*width*resolution > 65500 || (int)combinedImages[1]*width*resolution > 65500)
-            {
-                throw new ArgumentOutOfRangeException("Cannot have a dimension greater that 65500");
-            }
-            for (int x = 0; x < (int)combinedImages[0]*width*resolution; x+= (int)width*resolution)
-            {
-                for (int y = 0; y < (int)combinedImages[1]*width*resolution; y+= (int)height*resolution)
+                for (int y = 0; y < combinedImages[1]*height*resolution; y+= height*resolution)
                 {
                     Console.WriteLine($"Generating map {imageCount+1}/{combinedImages[0]*combinedImages[1]}...");
                     var watchSmall = new Stopwatch();
                     watchSmall.Start();
                     var pointList = GenerateEmptyArray();
-                    GenerateSimplexNoise(pointList, x, y);
+                    GenerateSimplexNoise(pointList, x/resolution, y/resolution);
                     GenerateRGBValues(pointList);
                     Bitmap bmp = GenerateBMP(pointList);
                     SaveImage(bmp, $"noiseMap-{imageCount}");
                     imageCount ++;
                     watchSmall.Stop();
                     imageCoords.Add(new Img(x, y, imageCount-1));
+                    Console.WriteLine($"X:{x}, Y:{y}, IMGCOUNT:{imageCount-1}");
                     sumTimes += watchSmall.ElapsedMilliseconds;
                     var avgTimeMS = sumTimes/imageCount;
                     var ETAms = avgTimeMS * (combinedImages[0]*combinedImages[1] - imageCount); 
@@ -96,7 +127,7 @@ namespace MapGenerator
             }
             Console.WriteLine("Joining all images...");
             ConvertToOneLarge();
-            ClearPartImages();
+            //ClearPartImages();
             watch.Stop();
             Console.WriteLine($"Finished creating map\nTook {watch.ElapsedMilliseconds}ms to create all maps\n");
         }
@@ -116,6 +147,16 @@ namespace MapGenerator
                 value = input;
                 return true;
             }
+        }
+        public static int Validation()
+        {
+            int numericalOutput;
+            string? input;
+            do
+            {
+                input = Console.ReadLine();
+            } while (!Validation(input, out numericalOutput));
+            return numericalOutput;
         }
         public static void SaveImage( Bitmap image, string imageName)
         {
@@ -228,7 +269,7 @@ namespace MapGenerator
                 //SaveImage(bmp, "MAINimage");
             }
         }
-        public static void ClearPartImages()
+        public static void ClearPartImages()  //need to fix
         {
             Console.WriteLine("Deleting residual files...");
             var watch = new Stopwatch();
@@ -238,8 +279,10 @@ namespace MapGenerator
             List<string> pathsToDelete = new List<string>();
             foreach (string imagePath in images)
             {
+                
                 for (int i = 0; i < imagePath.Length; i++)
                 {
+                    Console.WriteLine(imagePath.Substring(i,1));
                     if (Int32.TryParse(imagePath.Substring(i,1), out tempNum))
                     {
                         pathsToDelete.Add(imagePath);
@@ -248,6 +291,7 @@ namespace MapGenerator
             }
             foreach (string path in pathsToDelete)
             {
+                Console.WriteLine(path);
                 File.Delete(path);
             }
             watch.Stop();

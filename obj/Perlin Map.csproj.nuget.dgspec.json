@@ -45,18 +45,6 @@
         "net7.0": {
           "targetAlias": "net7.0",
           "dependencies": {
-            "Magick.NET-Q8-AnyCPU": {
-              "target": "Package",
-              "version": "[12.2.1, )"
-            },
-            "Magick.NET.Core": {
-              "target": "Package",
-              "version": "[12.2.1, )"
-            },
-            "Magick.NET.SystemDrawing": {
-              "target": "Package",
-              "version": "[6.1.2, )"
-            },
             "System.Drawing.Common": {
               "target": "Package",
               "version": "[7.0.0, )"

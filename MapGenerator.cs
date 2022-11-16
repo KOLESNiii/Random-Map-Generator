@@ -2,8 +2,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using System.Diagnostics;
-using System.IO;
-using ImageMagick;
 
 namespace MapGenerator
 {
@@ -450,7 +448,6 @@ namespace MapGenerator
         public static Bitmap GenerateBMP(List<Point> array)
         {
             Bitmap bmp = new Bitmap((int)width*resolution, (int)height*resolution, PixelFormat.Format24bppRgb);
-            //var m = new MagickFactory();
             
             Console.WriteLine("Converting to Bitmap...");
             var watch = new Stopwatch();
@@ -471,7 +468,6 @@ namespace MapGenerator
                     progress.Report((double) (count)/(width*height));
                 }
             }
-            MagickImage image = new MagickImage();
             watch.Stop();
             //Console.WriteLine($"Took {watch.ElapsedMilliseconds}ms to convert to bitmap");
             return bmp;

@@ -8,86 +8,10 @@
     ".NETCoreApp,Version=v7.0": {
       "Perlin Map/1.0.0": {
         "dependencies": {
-          "Magick.NET-Q8-AnyCPU": "12.2.1",
-          "Magick.NET.Core": "12.2.1",
-          "Magick.NET.SystemDrawing": "6.1.2",
           "System.Drawing.Common": "7.0.0"
         },
         "runtime": {
           "Perlin Map.dll": {}
-        }
-      },
-      "Magick.NET-Q8-AnyCPU/12.2.1": {
-        "dependencies": {
-          "Magick.NET.Core": "12.2.1"
-        },
-        "runtime": {
-          "lib/netstandard21/Magick.NET-Q8-AnyCPU.dll": {
-            "assemblyVersion": "12.2.0.0",
-            "fileVersion": "12.2.1.0"
-          }
-        },
-        "runtimeTargets": {
-          "runtimes/linux-arm64/native/Magick.Native-Q8-arm64.dll.so": {
-            "rid": "linux-arm64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/linux-musl-x64/native/Magick.Native-Q8-x64.dll.so": {
-            "rid": "linux-musl-x64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/linux-x64/native/Magick.Native-Q8-x64.dll.so": {
-            "rid": "linux-x64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/osx-arm64/native/Magick.Native-Q8-arm64.dll.dylib": {
-            "rid": "osx-arm64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/osx-x64/native/Magick.Native-Q8-x64.dll.dylib": {
-            "rid": "osx-x64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/win-arm64/native/Magick.Native-Q8-arm64.dll": {
-            "rid": "win-arm64",
-            "assetType": "native",
-            "fileVersion": "7.1.0.52"
-          },
-          "runtimes/win-x64/native/Magick.Native-Q8-x64.dll": {
-            "rid": "win-x64",
-            "assetType": "native",
-            "fileVersion": "7.1.0.52"
-          },
-          "runtimes/win-x86/native/Magick.Native-Q8-x86.dll": {
-            "rid": "win-x86",
-            "assetType": "native",
-            "fileVersion": "7.1.0.52"
-          }
-        }
-      },
-      "Magick.NET.Core/12.2.1": {
-        "runtime": {
-          "lib/netstandard21/Magick.NET.Core.dll": {
-            "assemblyVersion": "12.2.0.0",
-            "fileVersion": "12.2.1.0"
-          }
-        }
-      },
-      "Magick.NET.SystemDrawing/6.1.2": {
-        "dependencies": {
-          "Magick.NET.Core": "12.2.1",
-          "System.Drawing.Common": "7.0.0"
-        },
-        "runtime": {
-          "lib/netstandard21/Magick.NET.SystemDrawing.dll": {
-            "assemblyVersion": "6.1.0.0",
-            "fileVersion": "6.1.2.0"
-          }
         }
       },
       "Microsoft.Win32.SystemEvents/7.0.0": {
@@ -132,27 +56,6 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
-    },
-    "Magick.NET-Q8-AnyCPU/12.2.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-uFgBU4GCv3e5bCXwL8VmytUQdwUrKWo3GrL8NwsRKTdBGJfqfNylBVIjmQNWI05sO/kBp5k8hGeAfyEJQ1/a6Q==",
-      "path": "magick.net-q8-anycpu/12.2.1",
-      "hashPath": "magick.net-q8-anycpu.12.2.1.nupkg.sha512"
-    },
-    "Magick.NET.Core/12.2.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-Mj8AM1mSLDDtEjG56dA7WoPs+UqmqscvaKJf7Oo39m8Mlfp6Y3Q1NJ2V93b5RUk0uhrFAff/r42maKEVpWbOTQ==",
-      "path": "magick.net.core/12.2.1",
-      "hashPath": "magick.net.core.12.2.1.nupkg.sha512"
-    },
-    "Magick.NET.SystemDrawing/6.1.2": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-MHFLWkAsRb/IO3dJyLPednILrxCJr88epHcTlwd1FLlad9uaMQzDuDsiVxjVYMJaJLJ1+IILrd/6vL1qlE7/0w==",
-      "path": "magick.net.systemdrawing/6.1.2",
-      "hashPath": "magick.net.systemdrawing.6.1.2.nupkg.sha512"
     },
     "Microsoft.Win32.SystemEvents/7.0.0": {
       "type": "package",
